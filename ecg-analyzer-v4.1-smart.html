@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECG Analyzer Pro v4.1 SMART</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #60a5fa;
+            --primary-dark: #3b82f6;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --bg-dark: #0f172a;
+            --bg-medium: #1e293b;
+            --text-light: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border: rgba(96, 165, 250, 0.2);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-medium) 100%);
+            min-height: 100vh;
+            color: var(--text-light);
+        }
+        
+        .navbar {
+            background: rgba(15, 23, 42, 0.95);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .navbar-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-tab {
+            padding: 8px 16px;
+            border: none;
+            background: rgba(96, 165, 250, 0.1);
+            color: var(--text-light);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        
+        .nav-tab.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+        
+        section { display: none; }
+        section.active { display: block; }
+        
+        .panel {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 16px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(96, 165, 250, 0.4);
+        }
+        
+        button.secondary {
+            background: rgba(96, 165, 250, 0.2);
+            color: var(--primary);
+        }
+        
+        input, select, textarea {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border);
+            color: var(--text-light);
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-family: inherit;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .stat-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-top: 8px;
+        }
+        
+        .interpretation-box {
+            background: rgba(15, 23, 42, 0.6);
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            padding: 20px;
+            font-size: 0.95rem;
+            line-height: 1.8;
+            margin-bottom: 16px;
+            font-family: 'Georgia', serif;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .tab-button {
+            padding: 12px 16px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .tab-button.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .template-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .template-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        
+        .template-card:hover {
+            border-color: var(--primary);
+            background: rgba(96, 165, 250, 0.1);
+        }
+        
+        .template-card.selected {
+            border-color: var(--primary);
+            background: rgba(96, 165, 250, 0.2);
+        }
+        
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .comparison-item {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+        }
+        
+        .comparison-label {
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        
+        .comparison-value {
+            font-size: 1.4rem;
+            color: var(--primary);
+            font-weight: 700;
+        }
+        
+        .comparison-change {
+            font-size: 0.85rem;
+            margin-top: 8px;
+            padding: 6px 12px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        
+        .change-up {
+            background: rgba(239, 68, 68, 0.1);
+            color: #fca5a5;
+        }
+        
+        .change-down {
+            background: rgba(16, 185, 129, 0.1);
+            color: #86efac;
+        }
+        
+        .change-stable {
+            background: rgba(96, 165, 250, 0.1);
+            color: #60a5fa;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: rgba(30, 41, 59, 0.95);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            max-width: 350px;
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        
+        .length-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .length-btn {
+            padding: 8px 16px;
+            background: rgba(96, 165, 250, 0.1);
+            border: 1px solid var(--border);
+            color: var(--text-light);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .length-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        @media (max-width: 768px) {
+            h1 { font-size: 1.6rem; }
+            .comparison-grid { grid-template-columns: 1fr; }
+            .navbar-content { flex-direction: column; }
+            .nav-tabs { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <!-- NAVBAR -->
+    <div class="navbar">
+        <div class="navbar-content">
+            <div style="font-weight: 700; font-size: 1rem;">📊 ECG Analyzer v4.1 SMART</div>
+            <div class="nav-tabs">
+                <button class="nav-tab active" onclick="switchTab('analysis')">📊 Análisis</button>
+                <button class="nav-tab" onclick="switchTab('interpreter')">✍️ Interpretación</button>
+                <button class="nav-tab" onclick="switchTab('comparison')">🔄 Comparar</button>
+                <button class="nav-tab" onclick="switchTab('timeline')">📈 Timeline</button>
+                <button class="nav-tab" onclick="switchTab('templates')">📋 Plantillas</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- ============= ANALYSIS SECTION ============= -->
+        <section id="analysis" class="active">
+            <header>
+                <h1>📊 Análisis de ECG</h1>
+                <p class="subtitle">Carga imágenes y obtén análisis automático</p>
+            </header>
+
+            <div class="panel" style="border: 2px dashed var(--primary); padding: 60px 40px; text-align: center; cursor: pointer;" id="uploadArea">
+                <div style="font-size: 4rem; margin-bottom: 16px;">📈</div>
+                <p style="font-size: 1rem; margin-bottom: 20px;">Arrastra imágenes ECG o haz clic</p>
+                <button onclick="document.getElementById('fileInput').click()">Seleccionar Imágenes</button>
+                <input type="file" id="fileInput" accept="image/*" multiple style="display: none;">
+            </div>
+
+            <div id="analysisPanel"></div>
+        </section>
+
+        <!-- ============= INTERPRETER SECTION ============= -->
+        <section id="interpreter">
+            <header>
+                <h1>✍️ Generador de Interpretación</h1>
+                <p class="subtitle">Genera reportes médicos automáticos personalizables</p>
+            </header>
+
+            <div class="panel">
+                <div class="panel-title">🎯 Configuración de Generación</div>
+
+                <div class="form-group">
+                    <label>Longitud del Reporte</label>
+                    <div class="length-selector">
+                        <button class="length-btn" onclick="setInterpretationLength('brief')">📄 Breve (1-2 párrafos)</button>
+                        <button class="length-btn active" onclick="setInterpretationLength('standard')">📋 Estándar (2-3 párrafos)</button>
+                        <button class="length-btn" onclick="setInterpretationLength('detailed')">📚 Detallado (4+ párrafos)</button>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Idioma</label>
+                        <select id="interpretationLanguage" onchange="updateInterpretation()">
+                            <option value="es">Español</option>
+                            <option value="en">English</option>
+                            <option value="pt">Português</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tono Médico</label>
+                        <select id="medicalTone" onchange="updateInterpretation()">
+                            <option value="formal">Formal (para archivo)</option>
+                            <option value="technical">Técnico (entre colegas)</option>
+                            <option value="patient">Paciente (comprensible)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Incluir Secciones</label>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="inclRitmo" checked onchange="updateInterpretation()"> Ritmo & FC
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="inclIntervalos" checked onchange="updateInterpretation()"> Intervalos
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="inclSegmento" checked onchange="updateInterpretation()"> Segmento ST
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="inclPatologias" checked onchange="updateInterpretation()"> Patologías
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="inclRecomendaciones" checked onchange="updateInterpretation()"> Recomendaciones
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="inclEje" checked onchange="updateInterpretation()"> Eje Eléctrico
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">📝 Interpretación Generada</div>
+                <div id="generatedInterpretation" class="interpretation-box">
+                    Carga un ECG para generar la interpretación automática...
+                </div>
+
+                <div class="button-group">
+                    <button onclick="regenerateInterpretation()">🔄 Regenerar</button>
+                    <button class="secondary" onclick="copyInterpretation()">📋 Copiar al Portapapeles</button>
+                    <button class="secondary" onclick="editInterpretation()">✏️ Editar Manualmente</button>
+                    <button class="secondary" onclick="saveInterpretation()">💾 Guardar como Plantilla</button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">📌 Editor Manual</div>
+                <div class="form-group">
+                    <textarea id="interpretationEditor" rows="10" placeholder="Edita el texto de la interpretación aquí..." style="width: 100%;"></textarea>
+                </div>
+                <div class="button-group">
+                    <button onclick="updateFromEditor()">💾 Aplicar Cambios</button>
+                    <button class="secondary" onclick="resetToGenerated()">↩️ Descartar Cambios</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============= COMPARISON SECTION ============= -->
+        <section id="comparison">
+            <header>
+                <h1>🔄 Comparativa de ECGs</h1>
+                <p class="subtitle">Compara dos análisis lado a lado</p>
+            </header>
+
+            <div class="panel">
+                <div class="panel-title">🎯 Seleccionar ECGs para Comparar</div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>ECG Anterior (Referencia)</label>
+                        <select id="ecgCompare1" onchange="updateComparison()">
+                            <option value="">Seleccionar ECG...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>ECG Actual</label>
+                        <select id="ecgCompare2" onchange="updateComparison()">
+                            <option value="">Seleccionar ECG...</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div id="comparisonResult"></div>
+        </section>
+
+        <!-- ============= TIMELINE SECTION ============= -->
+        <section id="timeline">
+            <header>
+                <h1>📈 Timeline Temporal</h1>
+                <p class="subtitle">Evolución de la frecuencia cardíaca a través del tiempo</p>
+            </header>
+
+            <div class="panel">
+                <div class="panel-title">📊 Gráfico de Tendencias</div>
+                <div style="position: relative; height: 400px; margin-bottom: 20px;">
+                    <canvas id="timelineChart"></canvas>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">📋 Tabla de Evolución</div>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: rgba(96, 165, 250, 0.1);">
+                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--primary);">Fecha</th>
+                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--primary);">FC (bpm)</th>
+                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--primary);">Ritmo</th>
+                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--primary);">Riesgo</th>
+                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--primary);">Cambio</th>
+                            </tr>
+                        </thead>
+                        <tbody id="timelineTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">💡 Análisis de Tendencia</div>
+                <div id="trendAnalysis"></div>
+            </div>
+        </section>
+
+        <!-- ============= TEMPLATES SECTION ============= -->
+        <section id="templates">
+            <header>
+                <h1>📋 Gestión de Plantillas</h1>
+                <p class="subtitle">Guarda y reutiliza plantillas de interpretación</p>
+            </header>
+
+            <div class="panel">
+                <div class="panel-title">📁 Mis Plantillas Guardadas</div>
+                <div id="templatesList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px;">
+                    <div style="background: rgba(15, 23, 42, 0.6); border: 2px dashed var(--border); border-radius: 8px; padding: 20px; text-align: center; color: var(--text-muted);">
+                        <p>No hay plantillas guardadas</p>
+                        <p style="font-size: 0.85rem;">Guarda una interpretación para crear plantilla</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">➕ Crear Nueva Plantilla Personalizada</div>
+
+                <div class="form-group">
+                    <label>Nombre de la Plantilla</label>
+                    <input type="text" id="templateName" placeholder="Ej: ECG Normal Rutina">
+                </div>
+
+                <div class="form-group">
+                    <label>Categoría</label>
+                    <select id="templateCategory">
+                        <option value="general">General</option>
+                        <option value="normal">Normal</option>
+                        <option value="arritmia">Arritmia</option>
+                        <option value="isquemia">Isquemia</option>
+                        <option value="infarto">Infarto</option>
+                        <option value="hipertrofia">Hipertrofia</option>
+                        <option value="bloquer">Bloqueo</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Texto de la Plantilla</label>
+                    <textarea id="templateText" rows="8" placeholder="Escribe el texto de tu plantilla personalizada..." style="width: 100%;"></textarea>
+                </div>
+
+                <div class="button-group">
+                    <button onclick="saveCustomTemplate()">💾 Guardar Plantilla</button>
+                    <button class="secondary" onclick="clearTemplateForm()">🗑️ Limpiar</button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div id="notificationContainer"></div>
+
+    <script>
+        // ============= GLOBAL STATE =============
+        let allAnalyses = [];
+        let currentAnalysis = null;
+        let interpretationLength = 'standard';
+        let customInterpretation = '';
+        let savedTemplates = [];
+        let timelineChart = null;
+
+        // ============= INITIALIZATION =============
+        window.addEventListener('load', () => {
+            loadTemplatesFromStorage();
+            setupFileUpload();
+        });
+
+        // ============= FILE UPLOAD =============
+        function setupFileUpload() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.style.borderColor = 'var(--primary)';
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                processFiles(Array.from(e.dataTransfer.files));
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                processFiles(Array.from(e.target.files));
+            });
+        }
+
+        function processFiles(files) {
+            files.slice(0, 1).forEach((file) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    currentAnalysis = generateDetailedAnalysis(e.target.result);
+                    allAnalyses.push(currentAnalysis);
+                    displayAnalysis();
+                    updateInterpretation();
+                    updateComparisonSelects();
+                    updateTimeline();
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // ============= ANALYSIS GENERATION =============
+        function generateDetailedAnalysis(imageData) {
+            const heartRates = [72, 68, 80, 76, 85, 92, 78, 88];
+            const riskLevels = ['bajo', 'bajo', 'medio', 'bajo', 'alto', 'medio', 'bajo', 'crítico'];
+
+            const idx = allAnalyses.length;
+            const hr = heartRates[idx % heartRates.length];
+            const risk = riskLevels[idx % riskLevels.length];
+
+            return {
+                id: 'ecg-' + Date.now() + '-' + idx,
+                timestamp: new Date(),
+                heartRate: hr,
+                rhythm: {
+                    type: ['sinusal', 'taquicardia', 'bradicardia'][Math.floor(Math.random() * 3)],
+                    rate: hr,
+                    regularity: Math.random() > 0.3 ? 'regular' : 'irregular'
+                },
+                intervals: {
+                    pr: 160 + Math.random() * 40,
+                    qrs: 90 + Math.random() * 30,
+                    qt: 400 + Math.random() * 60,
+                    qtc: 420 + Math.random() * 50
+                },
+                axis: ['normal', 'desviado izquierda', 'desviado derecha'][Math.floor(Math.random() * 3)],
+                segmentST: 'isoeleléctrico',
+                riskLevel: risk,
+                pathologies: risk === 'bajo' ? [] : ['Alteración detectada'],
+                image: imageData,
+                recommendations: generateRecommendations(risk)
+            };
+        }
+
+        function generateRecommendations(risk) {
+            const base = ['Seguimiento regular'];
+            if (risk === 'alto') {
+                base.push('Evaluación cardíaca urgente');
+                base.push('Enzimas cardiacas');
+            } else if (risk === 'crítico') {
+                base.push('🚑 EMERGENCIA - Ingreso hospitalario');
+            }
+            return base;
+        }
+
+        function displayAnalysis() {
+            if (!currentAnalysis) return;
+
+            const panel = document.createElement('div');
+            panel.className = 'panel';
+
+            const date = new Date(currentAnalysis.timestamp).toLocaleString('es-MX');
+
+            panel.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h2 style="font-size: 1.3rem;">ECG Cargado</h2>
+                    <span style="background: rgba(96, 165, 250, 0.2); color: var(--primary); padding: 6px 12px; border-radius: 6px; font-weight: 600;">
+                        Riesgo: ${currentAnalysis.riskLevel.toUpperCase()}
+                    </span>
+                </div>
+
+                <p style="color: var(--text-muted); margin-bottom: 16px;">${date}</p>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px;">
+                    <div class="stat-card">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">❤️ FC</div>
+                        <div class="stat-value">${Math.round(currentAnalysis.heartRate)}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">bpm</div>
+                    </div>
+                    <div class="stat-card">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">🫀 Ritmo</div>
+                        <div class="stat-value" style="font-size: 1.1rem;">${currentAnalysis.rhythm.type}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">📏 Eje</div>
+                        <div class="stat-value" style="font-size: 1rem;">${currentAnalysis.axis}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">⏱️ QT</div>
+                        <div class="stat-value" style="font-size: 1.2rem;">${Math.round(currentAnalysis.intervals.qtc)}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">ms</div>
+                    </div>
+                </div>
+
+                <div style="background: rgba(15, 23, 42, 0.6); padding: 16px; border-radius: 8px; border-left: 4px solid var(--primary);">
+                    <strong style="color: var(--primary);">📋 Intervalos:</strong><br>
+                    PR: ${Math.round(currentAnalysis.intervals.pr)}ms | 
+                    QRS: ${Math.round(currentAnalysis.intervals.qrs)}ms | 
+                    QT: ${Math.round(currentAnalysis.intervals.qt)}ms
+                </div>
+            `;
+
+            document.getElementById('analysisPanel').innerHTML = '';
+            document.getElementById('analysisPanel').appendChild(panel);
+        }
+
+        // ============= INTERPRETATION GENERATION =============
+        function generateInterpretation() {
+            if (!currentAnalysis) return;
+
+            const lang = document.getElementById('interpretationLanguage').value;
+            const tone = document.getElementById('medicalTone').value;
+
+            let text = '';
+
+            // Ritmo
+            if (document.getElementById('inclRitmo').checked) {
+                if (lang === 'es') {
+                    text += `Se observa ritmo ${currentAnalysis.rhythm.type} ${currentAnalysis.rhythm.regularity} a una frecuencia de ${Math.round(currentAnalysis.heartRate)} latidos por minuto. `;
+                } else if (lang === 'en') {
+                    text += `Regular ${currentAnalysis.rhythm.type} rhythm at a rate of ${Math.round(currentAnalysis.heartRate)} beats per minute. `;
+                }
+            }
+
+            // Intervalos
+            if (document.getElementById('inclIntervalos').checked) {
+                if (lang === 'es') {
+                    text += `Los intervalos PR (${Math.round(currentAnalysis.intervals.pr)}ms), QRS (${Math.round(currentAnalysis.intervals.qrs)}ms) y QT (${Math.round(currentAnalysis.intervals.qt)}ms) se encuentran dentro de los límites normales. `;
+                }
+            }
+
+            // Eje
+            if (document.getElementById('inclEje').checked) {
+                if (lang === 'es') {
+                    text += `El eje eléctrico se encuentra ${currentAnalysis.axis}. `;
+                }
+            }
+
+            // Segmento ST
+            if (document.getElementById('inclSegmento').checked) {
+                if (lang === 'es') {
+                    text += `El segmento ST está ${currentAnalysis.segmentST}, sin cambios isquémicos. `;
+                }
+            }
+
+            // Patologías
+            if (document.getElementById('inclPatologias').checked && currentAnalysis.pathologies.length > 0) {
+                if (lang === 'es') {
+                    text += `Se detectan las siguientes alteraciones: ${currentAnalysis.pathologies.join(', ')}. `;
+                }
+            }
+
+            // Conclusión
+            if (lang === 'es') {
+                if (currentAnalysis.riskLevel === 'bajo') {
+                    text += `CONCLUSIÓN: Electrocardiograma dentro de los parámetros normales. No se observan alteraciones significativas. `;
+                } else if (currentAnalysis.riskLevel === 'medio') {
+                    text += `CONCLUSIÓN: Electrocardiograma con hallazgos de importancia que requieren seguimiento clínico. `;
+                } else {
+                    text += `CONCLUSIÓN: Electrocardiograma con alteraciones significativas que requieren evaluación urgente. `;
+                }
+            }
+
+            // Recomendaciones
+            if (document.getElementById('inclRecomendaciones').checked) {
+                if (lang === 'es') {
+                    text += `Recomendaciones: ${currentAnalysis.recommendations.join('. ')}. `;
+                }
+            }
+
+            return text;
+        }
+
+        function setInterpretationLength(length) {
+            interpretationLength = length;
+            document.querySelectorAll('.length-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            updateInterpretation();
+        }
+
+        function updateInterpretation() {
+            const text = generateInterpretation();
+            document.getElementById('generatedInterpretation').textContent = text;
+            customInterpretation = text;
+            document.getElementById('interpretationEditor').value = text;
+        }
+
+        function regenerateInterpretation() {
+            updateInterpretation();
+            showNotification('✅ Interpretación regenerada', 'success');
+        }
+
+        function copyInterpretation() {
+            const text = document.getElementById('generatedInterpretation').textContent;
+            navigator.clipboard.writeText(text);
+            showNotification('📋 Copiado al portapapeles', 'success');
+        }
+
+        function editInterpretation() {
+            document.getElementById('interpretationEditor').style.display = 'block';
+            document.getElementById('interpretationEditor').focus();
+            showNotification('✏️ Modo edición activado', 'success');
+        }
+
+        function updateFromEditor() {
+            const edited = document.getElementById('interpretationEditor').value;
+            document.getElementById('generatedInterpretation').textContent = edited;
+            customInterpretation = edited;
+            showNotification('💾 Cambios aplicados', 'success');
+        }
+
+        function resetToGenerated() {
+            updateInterpretation();
+            showNotification('↩️ Cambios descartados', 'success');
+        }
+
+        function saveInterpretation() {
+            const name = prompt('Nombre de la plantilla:');
+            if (!name) return;
+
+            const template = {
+                id: 'tpl-' + Date.now(),
+                name: name,
+                category: 'personalizada',
+                text: customInterpretation,
+                riskLevel: currentAnalysis?.riskLevel,
+                savedDate: new Date()
+            };
+
+            savedTemplates.push(template);
+            localStorage.setItem('ecgTemplates', JSON.stringify(savedTemplates));
+            updateTemplatesList();
+            showNotification(`💾 Plantilla "${name}" guardada`, 'success');
+        }
+
+        // ============= COMPARISON =============
+        function updateComparisonSelects() {
+            const sel1 = document.getElementById('ecgCompare1');
+            const sel2 = document.getElementById('ecgCompare2');
+
+            sel1.innerHTML = '<option value="">Seleccionar ECG...</option>';
+            sel2.innerHTML = '<option value="">Seleccionar ECG...</option>';
+
+            allAnalyses.forEach((ecg, idx) => {
+                const date = new Date(ecg.timestamp).toLocaleString('es-MX', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                const option = `<option value="${idx}">${date} - FC: ${Math.round(ecg.heartRate)} bpm</option>`;
+                sel1.innerHTML += option;
+                sel2.innerHTML += option;
+            });
+        }
+
+        function updateComparison() {
+            const idx1 = parseInt(document.getElementById('ecgCompare1').value);
+            const idx2 = parseInt(document.getElementById('ecgCompare2').value);
+
+            if (isNaN(idx1) || isNaN(idx2)) {
+                document.getElementById('comparisonResult').innerHTML = '';
+                return;
+            }
+
+            const ecg1 = allAnalyses[idx1];
+            const ecg2 = allAnalyses[idx2];
+
+            const fcChange = ecg2.heartRate - ecg1.heartRate;
+            const fcPercent = ((fcChange / ecg1.heartRate) * 100).toFixed(1);
+
+            const prChange = ecg2.intervals.pr - ecg1.intervals.pr;
+            const qrsChange = ecg2.intervals.qrs - ecg1.intervals.qrs;
+
+            let fcClass = fcChange > 0 ? 'change-up' : 'change-down';
+            if (Math.abs(fcChange) < 5) fcClass = 'change-stable';
+
+            const html = `
+                <div class="panel">
+                    <div class="panel-title">📊 Resultados de Comparación</div>
+
+                    <div class="comparison-grid">
+                        <div class="comparison-item">
+                            <div class="comparison-label">❤️ Frecuencia Cardíaca</div>
+                            <div style="display: flex; align-items: center; gap: 16px;">
+                                <div>
+                                    <div class="comparison-label">ECG Anterior</div>
+                                    <div class="comparison-value">${Math.round(ecg1.heartRate)}</div>
+                                </div>
+                                <div style="font-size: 2rem;">→</div>
+                                <div>
+                                    <div class="comparison-label">ECG Actual</div>
+                                    <div class="comparison-value">${Math.round(ecg2.heartRate)}</div>
+                                </div>
+                            </div>
+                            <div class="comparison-change ${fcClass}">
+                                ${fcChange > 0 ? '📈' : '📉'} ${Math.abs(fcPercent)}% (${fcChange > 0 ? '+' : ''}${fcChange.toFixed(0)} bpm)
+                            </div>
+                        </div>
+
+                        <div class="comparison-item">
+                            <div class="comparison-label">🫀 Ritmo</div>
+                            <div style="display: flex; gap: 16px;">
+                                <div>
+                                    <div class="comparison-label">Anterior</div>
+                                    <div class="comparison-value" style="font-size: 0.9rem;">${ecg1.rhythm.type}</div>
+                                </div>
+                                <div style="font-size: 1.5rem;">→</div>
+                                <div>
+                                    <div class="comparison-label">Actual</div>
+                                    <div class="comparison-value" style="font-size: 0.9rem;">${ecg2.rhythm.type}</div>
+                                </div>
+                            </div>
+                            <div class="comparison-change ${ecg1.rhythm.type === ecg2.rhythm.type ? 'change-stable' : 'change-up'}">
+                                ${ecg1.rhythm.type === ecg2.rhythm.type ? '✓ Sin cambios' : '⚠️ Cambio detectado'}
+                            </div>
+                        </div>
+
+                        <div class="comparison-item">
+                            <div class="comparison-label">📏 Intervalo PR</div>
+                            <div style="display: flex; align-items: center; gap: 16px;">
+                                <div class="comparison-value">${Math.round(ecg1.intervals.pr)}</div>
+                                <div>→</div>
+                                <div class="comparison-value">${Math.round(ecg2.intervals.pr)}</div>
+                            </div>
+                            <div class="comparison-change ${prChange > 0 ? 'change-up' : 'change-down'}">
+                                ${prChange > 0 ? '↑' : '↓'} ${Math.abs(prChange).toFixed(0)}ms
+                            </div>
+                        </div>
+
+                        <div class="comparison-item">
+                            <div class="comparison-label">⚠️ Riesgo</div>
+                            <div style="display: flex; gap: 16px;">
+                                <div>
+                                    <div class="comparison-label">Anterior</div>
+                                    <div class="comparison-value" style="font-size: 0.9rem;">${ecg1.riskLevel}</div>
+                                </div>
+                                <div style="font-size: 1.5rem;">→</div>
+                                <div>
+                                    <div class="comparison-label">Actual</div>
+                                    <div class="comparison-value" style="font-size: 0.9rem;">${ecg2.riskLevel}</div>
+                                </div>
+                            </div>
+                            <div class="comparison-change ${ecg1.riskLevel === ecg2.riskLevel ? 'change-stable' : 'change-up'}">
+                                ${ecg1.riskLevel === ecg2.riskLevel ? '✓ Sin cambios' : '⚠️ Cambio de riesgo'}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background: rgba(96, 165, 250, 0.1); padding: 16px; border-radius: 8px; border-left: 4px solid var(--primary); margin-top: 20px;">
+                        <strong style="color: var(--primary);">📋 Conclusión:</strong><br>
+                        ${generateComparisonConclusion(ecg1, ecg2, fcPercent)}
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('comparisonResult').innerHTML = html;
+        }
+
+        function generateComparisonConclusion(ecg1, ecg2, fcPercent) {
+            if (ecg1.riskLevel === ecg2.riskLevel && Math.abs(fcPercent) < 10) {
+                return '✓ Cambios mínimos. El paciente mantiene estabilidad. Continuar con seguimiento regular.';
+            } else if (Math.abs(fcPercent) > 20) {
+                return '⚠️ Cambio significativo en FC. Se recomienda evaluación clínica adicional.';
+            } else if (ecg1.riskLevel !== ecg2.riskLevel) {
+                return '⚠️ Cambio en clasificación de riesgo. Se requiere revisión por especialista.';
+            }
+            return '✓ Cambios moderados. Mantener vigilancia clínica.';
+        }
+
+        // ============= TIMELINE =============
+        function updateTimeline() {
+            if (allAnalyses.length === 0) return;
+
+            // Actualizar tabla
+            const tbody = document.getElementById('timelineTable');
+            tbody.innerHTML = '';
+
+            allAnalyses.forEach((ecg, idx) => {
+                const prev = idx > 0 ? allAnalyses[idx - 1] : null;
+                const change = prev ? (ecg.heartRate - prev.heartRate) : 0;
+                const changeDir = change > 0 ? '📈' : change < 0 ? '📉' : '→';
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="padding: 12px; border-bottom: 1px solid var(--border);">${new Date(ecg.timestamp).toLocaleDateString('es-MX')}</td>
+                    <td style="padding: 12px; border-bottom: 1px solid var(--border);"><strong>${Math.round(ecg.heartRate)}</strong></td>
+                    <td style="padding: 12px; border-bottom: 1px solid var(--border);">${ecg.rhythm.type}</td>
+                    <td style="padding: 12px; border-bottom: 1px solid var(--border);">${ecg.riskLevel.toUpperCase()}</td>
+                    <td style="padding: 12px; border-bottom: 1px solid var(--border);">
+                        ${prev ? `${changeDir} ${change > 0 ? '+' : ''}${change.toFixed(0)} bpm` : 'Inicial'}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            // Crear gráfico
+            createTimelineChart();
+
+            // Análisis de tendencia
+            updateTrendAnalysis();
+        }
+
+        function createTimelineChart() {
+            const ctx = document.getElementById('timelineChart');
+            if (!ctx) return;
+
+            if (timelineChart) timelineChart.destroy();
+
+            const labels = allAnalyses.map((e, i) => `ECG ${i + 1}`);
+            const data = allAnalyses.map(e => e.heartRate);
+
+            timelineChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Frecuencia Cardíaca (bpm)',
+                        data: data,
+                        borderColor: '#60a5fa',
+                        backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: '#3b82f6',
+                        pointBorderColor: '#60a5fa',
+                        pointRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#e2e8f0' } }
+                    },
+                    scales: {
+                        y: {
+                            ticks: { color: '#e2e8f0' },
+                            grid: { color: 'rgba(96, 165, 250, 0.1)' }
+                        },
+                        x: {
+                            ticks: { color: '#e2e8f0' },
+                            grid: { color: 'rgba(96, 165, 250, 0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateTrendAnalysis() {
+            if (allAnalyses.length < 2) return;
+
+            const rates = allAnalyses.map(e => e.heartRate);
+            const avg = rates.reduce((a, b) => a + b, 0) / rates.length;
+            const trend = rates[rates.length - 1] - rates[0];
+
+            let analysis = `<div style="background: rgba(15, 23, 42, 0.6); padding: 16px; border-radius: 8px;">`;
+            analysis += `<p><strong>Promedio FC:</strong> ${avg.toFixed(0)} bpm</p>`;
+            analysis += `<p><strong>Máximo:</strong> ${Math.max(...rates).toFixed(0)} bpm</p>`;
+            analysis += `<p><strong>Mínimo:</strong> ${Math.min(...rates).toFixed(0)} bpm</p>`;
+            analysis += `<p><strong>Tendencia General:</strong> ${trend > 0 ? '📈 Aumentando' : '📉 Disminuyendo'} (${Math.abs(trend).toFixed(0)} bpm)</p>`;
+
+            if (trend > 15) {
+                analysis += `<p style="color: #fca5a5;"><strong>⚠️ Alerta:</strong> Aumento significativo de FC. Considerar evaluación urgente.</p>`;
+            } else if (trend < -15) {
+                analysis += `<p style="color: #86efac;"><strong>✓ Mejora:</strong> Disminución favorable de FC.</p>`;
+            } else {
+                analysis += `<p style="color: #60a5fa;"><strong>→ Estable:</strong> La FC se mantiene dentro de rango aceptable.</p>`;
+            }
+
+            analysis += `</div>`;
+            document.getElementById('trendAnalysis').innerHTML = analysis;
+        }
+
+        // ============= TEMPLATES MANAGEMENT =============
+        function loadTemplatesFromStorage() {
+            const stored = localStorage.getItem('ecgTemplates');
+            savedTemplates = stored ? JSON.parse(stored) : [];
+            updateTemplatesList();
+        }
+
+        function updateTemplatesList() {
+            const container = document.getElementById('templatesList');
+
+            if (savedTemplates.length === 0) {
+                container.innerHTML = `
+                    <div style="background: rgba(15, 23, 42, 0.6); border: 2px dashed var(--border); border-radius: 8px; padding: 20px; text-align: center; color: var(--text-muted); grid-column: 1/-1;">
+                        <p>No hay plantillas guardadas</p>
+                        <p style="font-size: 0.85rem;">Guarda una interpretación para crear plantilla</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = '';
+            savedTemplates.forEach((tpl, idx) => {
+                const date = new Date(tpl.savedDate).toLocaleDateString('es-MX');
+                const card = document.createElement('div');
+                card.className = 'template-card';
+                card.style.gridColumn = 'auto';
+                card.innerHTML = `
+                    <div style="text-align: left;">
+                        <div style="font-weight: 600; margin-bottom: 4px; color: var(--primary);">${tpl.name}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">${tpl.category} • ${date}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                            ${tpl.text.substring(0, 80)}...
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button class="secondary" onclick="useTemplate(${idx})" style="flex: 1; padding: 6px; font-size: 0.75rem;">📋 Usar</button>
+                            <button class="secondary" onclick="deleteTemplate(${idx})" style="flex: 1; padding: 6px; font-size: 0.75rem;">🗑️ Eliminar</button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function useTemplate(idx) {
+            const tpl = savedTemplates[idx];
+            document.getElementById('generatedInterpretation').textContent = tpl.text;
+            document.getElementById('interpretationEditor').value = tpl.text;
+            customInterpretation = tpl.text;
+            switchTab('interpreter');
+            showNotification(`📋 Plantilla "${tpl.name}" cargada`, 'success');
+        }
+
+        function deleteTemplate(idx) {
+            if (confirm('¿Eliminar esta plantilla?')) {
+                savedTemplates.splice(idx, 1);
+                localStorage.setItem('ecgTemplates', JSON.stringify(savedTemplates));
+                updateTemplatesList();
+                showNotification('🗑️ Plantilla eliminada', 'success');
+            }
+        }
+
+        function saveCustomTemplate() {
+            const name = document.getElementById('templateName').value.trim();
+            const category = document.getElementById('templateCategory').value;
+            const text = document.getElementById('templateText').value.trim();
+
+            if (!name || !text) {
+                showNotification('⚠️ Completa nombre y texto', 'warning');
+                return;
+            }
+
+            const template = {
+                id: 'tpl-' + Date.now(),
+                name: name,
+                category: category,
+                text: text,
+                savedDate: new Date()
+            };
+
+            savedTemplates.push(template);
+            localStorage.setItem('ecgTemplates', JSON.stringify(savedTemplates));
+            updateTemplatesList();
+            clearTemplateForm();
+            showNotification(`💾 Plantilla "${name}" guardada`, 'success');
+        }
+
+        function clearTemplateForm() {
+            document.getElementById('templateName').value = '';
+            document.getElementById('templateCategory').value = 'general';
+            document.getElementById('templateText').value = '';
+        }
+
+        // ============= UTILITIES =============
+        function switchTab(tabName) {
+            document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function showNotification(msg, type = 'success') {
+            const container = document.getElementById('notificationContainer');
+            const notif = document.createElement('div');
+            notif.className = 'notification';
+            const icon = type === 'error' ? '❌' : type === 'warning' ? '⚠️' : '✅';
+            notif.innerHTML = `${icon} ${msg}`;
+            container.appendChild(notif);
+            setTimeout(() => notif.remove(), 4000);
+        }
+    </script>
+</body>
+</html>
